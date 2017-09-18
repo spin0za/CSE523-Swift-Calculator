@@ -12,12 +12,15 @@ class ViewController: UIViewController {
     private var brain = CalculatorBrain()
     @IBOutlet weak var sequence: UILabel!
     @IBOutlet weak var display: UILabel!
-    private var displayValue: Double {
+    private var displayValue: Double? {
         get {
             return Double(display.text!)!
         }
         set {
-            display.text = String(newValue)
+            if let val = newValue {
+                display.text = format(val)
+            }
+            sequence.text = brain.description.isEmpty ? "" : brain.description + (brain.resultIsPending ? "..." : "=")
         }
     }
     private var isTyping = false
@@ -34,13 +37,20 @@ class ViewController: UIViewController {
             isTyping = true
         }
     }
+    @IBAction func touchClear(_ sender: UIButton) {
+        brain.clear()
+        isTyping = false
+        displayValue = 0
+    }
     @IBAction func touchOperation(_ sender: UIButton) {
+        let op = sender.currentTitle!
         if isTyping {
-            brain.setOperand(displayValue)
+            if let val = displayValue {
+                brain.setOperand(val)
+            }
             isTyping = false
         }
-        brain.doOperation(sender.currentTitle!)
-        displayValue = brain.result ?? 0
-        sequence.text = brain.description
+        brain.doOperation(op)
+        displayValue = brain.result
     }
 }

@@ -186,7 +186,7 @@
                                 <fontDescription key="fontDescription" type="system" pointSize="24"/>
                                 <state key="normal" title="C"/>
                                 <connections>
-                                    <action selector="touchOperation:" destination="BYZ-38-t0r" eventType="touchUpInside" id="JLp-1D-2Af"/>
+                                    <action selector="touchClear:" destination="BYZ-38-t0r" eventType="touchUpInside" id="jFp-Yr-4dn"/>
                                 </connections>
                             </button>
                             <label opaque="NO" userInteractionEnabled="NO" contentMode="left" horizontalHuggingPriority="251" verticalHuggingPriority="251" fixedFrame="YES" text="" textAlignment="right" lineBreakMode="tailTruncation" baselineAdjustment="alignBaselines" adjustsFontSizeToFit="NO" translatesAutoresizingMaskIntoConstraints="NO" id="sBx-83-DTA">

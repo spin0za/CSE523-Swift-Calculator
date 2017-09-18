@@ -8,8 +8,19 @@
 
 import Foundation
 
+let formatter: NumberFormatter = {
+    let fmt = NumberFormatter()
+    fmt.maximumFractionDigits = 6
+    return fmt
+}()
+
+func format(_ number: Double) -> String {
+    return formatter.string(from: NSNumber(value: number)) ?? ""
+}
+
 struct CalculatorBrain {
     private var accumulator: Double?
+    private var intermediateDesc = ""
     var result: Double? {
         get {
             return accumulator
@@ -17,27 +28,30 @@ struct CalculatorBrain {
     }
     private enum Operator {
         case mathConst(Double)
-        case unaryOp((Double) -> Double)
-        case binaryOp((Double, Double) -> Double)
+        case unaryOp((Double) -> Double, (String) -> String)
+        case binaryOp((Double, Double) -> Double, (String, String) -> String)
         case equal
-        case clear
     }
     private var opDict: Dictionary<String, Operator> = [
         "𝐞": .mathConst(M_E),
         "𝛑": .mathConst(Double.pi),
-        "√": .unaryOp(sqrt),
-        "+": .binaryOp({ $0 + $1 }),
-        "−": .binaryOp({ $0 - $1 }),
-        "×": .binaryOp({ $0 * $1 }),
-        "÷": .binaryOp({ $0 / $1 }),
-        "=": .equal,
-        "C": .clear
+        "√": .unaryOp(sqrt, {"√(\($0))"}),
+        "+": .binaryOp(+, {"\($0)+\($1)"}),
+        "−": .binaryOp(-, {"\($0)-\($1)"}),
+        "×": .binaryOp(*, {"\($0)×\($1)"}),
+        "÷": .binaryOp(/, {"\($0)÷\($1)"}),
+        "=": .equal
     ]
     private struct PendingBinaryOp {
         let function: (Double, Double) -> Double
         let firstOperand: Double
+        let descFunction: (String, String) -> String
+        let descFirstOperand: String
         func compute(with secondOperand: Double) -> Double {
             return function(firstOperand, secondOperand)
+        }
+        func updateText(with descSecondOperand: String) -> String {
+            return descFunction(descFirstOperand, descSecondOperand)
         }
     }
     private var pendingBinaryOp: PendingBinaryOp?
@@ -46,51 +60,49 @@ struct CalculatorBrain {
             return pendingBinaryOp != nil
         }
     }
-    var description = ""
+    var description: String {
+        get {
+            return resultIsPending ? pendingBinaryOp!.updateText(with: intermediateDesc) : intermediateDesc
+        }
+    }
     
+    private mutating func doPendingOp() {
+        if resultIsPending && accumulator != nil {
+            accumulator = pendingBinaryOp!.compute(with: accumulator!)
+            intermediateDesc = pendingBinaryOp!.updateText(with: intermediateDesc)
+            pendingBinaryOp = nil
+        }
+    }
+    mutating func setOperand(_ operand: Double) {
+        accumulator = operand
+        intermediateDesc = format(accumulator!)
+    }
     mutating func doOperation(_ symbol: String) {
         if let op = opDict[symbol] {
             switch op {
             case .mathConst(let val):
                 accumulator = val
-            case .unaryOp(let op):
+                intermediateDesc = symbol
+            case .unaryOp(let op, let df):
                 if accumulator != nil {
-                    if resultIsPending {
-                        if description.hasSuffix("...") {
-                            description.removeLast(3)
-                        }
-                        description += symbol + "(\(accumulator!))..."
-                    } else {
-                        if description.hasSuffix("=") {
-                            description.removeLast()
-                        } else {
-                            description = String(accumulator!)
-                        }
-                        description = symbol + "(\(description))="
-                    }
                     accumulator = op(accumulator!)
+                    intermediateDesc = df(intermediateDesc)
                 }
-            case .binaryOp(let op):
+            case .binaryOp(let op, let df):
+                doPendingOp()
                 if accumulator != nil {
-                    if resultIsPending {
-                        accumulator = pendingBinaryOp!.compute(with: accumulator!)
-                    }
-                    pendingBinaryOp = PendingBinaryOp(function: op, firstOperand: accumulator!)
+                    pendingBinaryOp = PendingBinaryOp(function: op, firstOperand: accumulator!, descFunction: df, descFirstOperand: intermediateDesc)
                     accumulator = nil
+                    intermediateDesc = ""
                 }
             case .equal:
-                if resultIsPending && accumulator != nil {
-                    accumulator = pendingBinaryOp!.compute(with: accumulator!)
-                    pendingBinaryOp = nil
-                }
-            case .clear:
-                accumulator = nil
-                description = ""
-                pendingBinaryOp = nil
+                doPendingOp()
             }
         }
     }
-    mutating func setOperand(_ operand: Double) {
-        accumulator = operand
+    mutating func clear() {
+        accumulator = nil
+        intermediateDesc = ""
+        pendingBinaryOp = nil
     }
 }
